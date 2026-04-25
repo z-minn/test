@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二十四节气 · 时令诗境</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap');
+
+  :root {
+    --accent: #c8a96e;
+    --bg-dark: #140b3a;
+    --ink: #f0ebfa;
+    --hue-shift: 0deg;
+    --season-glow: rgba(180,140,255,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-dark);
+    color: var(--ink);
+    font-family: 'Noto Serif SC', 'STSong', '宋体', serif;
+    overflow-x: hidden;
+    filter: hue-rotate(var(--hue-shift));
+    transition: filter 1.5s ease;
+    background: radial-gradient(ellipse at 15% 10%, #2818A0 0%, #140b3a 40%, #0c0530 70%, #080320 100%),
+                linear-gradient(135deg, #18186A 0%, #140b3a 40%, #1C0A58 70%, #100830 100%);
+  }
+
+  /* ===== 粒子画布 ===== */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ===== 导航栏 ===== */
+  header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(20,11,58,.95), transparent);
+    backdrop-filter: blur(4px);
+  }
+  .logo {
+    font-size: 1.1rem;
+    letter-spacing: .3em;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  nav {
+    display: flex;
+    gap: 8px;
+  }
+  nav a {
+    position: relative;
+    color: rgba(240,232,216,.7);
+    text-decoration: none;
+    padding: 8px 18px;
+    font-size: .8rem;
+    letter-spacing: .15em;
+    transition: all .4s cubic-bezier(.4,0,.2,1);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  nav a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), transparent);
+    opacity: 0;
+    transform: scale(0);
+    transition: all .4s cubic-bezier(.34,1.56,.64,1);
+    border-radius: inherit;
+  }
+  nav a:hover { 
+    color: #fff;
+    transform: scale(1.05);
+  }
+  nav a:hover::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ===== 星辰背景 ===== */
+  #starfield {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    background: radial-gradient(ellipse at 25% 15%, rgba(80,50,160,.25) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 75%, rgba(40,80,180,.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(20,10,60,.15) 0%, transparent 70%);
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  .star.small {
+    width: 1px; height: 1px;
+    box-shadow: 0 0 3px 1px rgba(200,200,255,.5);
+    opacity: var(--base-opacity);
+  }
+  .star.medium {
+    width: 2px; height: 2px;
+    box-shadow: 0 0 6px 2px rgba(180,160,255,.4), 0 0 10px 1px rgba(255,255,255,.3);
+    opacity: var(--base-opacity);
+  }
+  .star.large {
+    width: 3px; height: 3px;
+    box-shadow: 0 0 8px 3px rgba(140,100,255,.5), 0 0 14px 2px rgba(200,160,255,.3);
+    opacity: var(--base-opacity);
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: var(--base-opacity); transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.8); }
+  }
+
+  /* ===== 首屏 Hero ===== */
+  #hero {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .brush-title {
+    width: min(90vw, 640px);
+    margin-bottom: 28px;
+  }
+  .brush-title text {
+    font-size: 80px;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    animation: brushDraw 3s cubic-bezier(.4,0,.2,1) forwards .4s;
+    font-family: 'STKaiti', 'KaiTi', serif;
+  }
+  @keyframes brushDraw {
+    to { stroke-dashoffset: 0; fill: rgba(200,169,110,.2); }
+  }
+
+  .hero-sub {
+    font-size: 1rem;
+    letter-spacing: .5em;
+    color: rgba(200,169,110,.9);
+    opacity: 0;
+    animation: fadeUp .8s ease forwards 2.6s;
+  }
+  .hero-desc {
+    margin-top: 14px;
+    font-size: .85rem;
+    letter-spacing: .2em;
+    color: rgba(200,169,110,.75);
+    opacity: 0;
+    animation: fadeUp .8s ease forwards 3s;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeUp .8s ease forwards 3.5s;
+  }
+  .scroll-hint span {
+    font-size: .7rem;
+    letter-spacing: .25em;
+    color: rgba(200,169,110,.8);
+  }
+  .scroll-line {
+    width: 1px; height: 50px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity:.3; transform:scaleY(1); }
+    50% { opacity:1; transform:scaleY(1.2); }
+  }
+
+  .deco-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(139,115,85,.15);
+    animation: ringExpand 6s ease-in-out infinite;
+  }
+  .deco-ring:nth-child(1) { width:300px;height:300px; animation-delay:0s; }
+  .deco-ring:nth-child(2) { width:480px;height:480px; animation-delay:.6s; }
+  .deco-ring:nth-child(3) { width:660px;height:660px; animation-delay:1.2s; }
+  @keyframes ringExpand {
+    0%,100% { transform:scale(1); opacity:.5; }
+    50% { transform:scale(1.05); opacity:1; }
+  }
+
+  /* ===== 主内容区（精简） ===== */
+  #main-content {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 60px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ===== 节气罗盘 ===== */
+  .section-title {
+    font-size: 1.5rem;
+    letter-spacing: .4em;
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .section-sub {
+    font-size: .8rem;
+    letter-spacing: .2em;
+    color: rgba(200,169,110,.8);
+    margin-bottom: 40px;
+    text-align: center;
+  }
+
+  .compass-wrap {
+    position: relative;
+    width: min(580px, 92vw);
+    height: min(580px, 92vw);
+    margin: 0 auto 60px;
+    pointer-events: none;
+  }
+  #compass-svg { width: 100%; height: 100%; pointer-events: none; }
+  .compass-node { pointer-events: all; }
+
+  /* ===== 底部 ===== */
+  footer {
+    position: relative;
+    z-index: 1;
+    padding: 40px;
+    text-align: center;
+    border-top: 1px solid rgba(200,169,110,.12);
+    font-size: .75rem;
+    letter-spacing: .15em;
+    color: rgba(200,169,110,.75);
+  }
+
+  /* ===== 页面进入动画 ===== */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity .9s ease, transform .9s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 浮动装饰文字 */
+  .float-char {
+    position: absolute;
+    font-size: 1.2rem;
+    color: rgba(139,115,85,.2);
+    letter-spacing: .1em;
+    pointer-events: none;
+    animation: floatChar 8s ease-in-out infinite;
+  }
+  @keyframes floatChar {
+    0%,100%{transform:translateY(0) rotate(0deg);opacity:.15}
+    50%{transform:translateY(-30px) rotate(5deg);opacity:.3}
+  }
+
+  /* 滚动进度条 */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--accent), #eb5757, #56ccf2);
+    z-index: 200;
+    transition: width .1s;
+  }
+
+  /* ===== 节气详情卷轴弹窗 ===== */
+  #scroll-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s ease;
+  }
+  #scroll-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #scroll-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 5, 20, 0.82);
+    backdrop-filter: blur(24px);
+  }
+
+  /* ===== 卷轴本体 ===== */
+  #scroll-box {
+    position: relative;
+    z-index: 1;
+    width: min(620px, 94vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* 古典卷轴背景 */
+    background: 
+      linear-gradient(to bottom, rgba(25,18,55,.97) 0%, rgba(18,12,40,.98) 100%),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 28px,
+        rgba(200,169,110,.025) 28px,
+        rgba(200,169,110,.025) 29px
+      );
+    border-radius: 0;
+    /* 左右玉轴装饰 */
+    border-left: 3px solid var(--accent);
+    border-right: 3px solid var(--accent);
+    box-shadow: 
+      -24px 0 70px rgba(180,140,255,.06),
+      24px 0 70px rgba(180,140,255,.06),
+      0 0 120px rgba(180,140,255,.12),
+      inset 0 0 80px rgba(180,140,255,.03);
+    /* 滚动入场动画 */
+    transform: translateX(110%) scaleX(.95);
+    transition: transform .65s cubic-bezier(.22,1,.36,1), opacity .5s ease;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(200,169,110,.25) transparent;
+  }
+  #scroll-overlay.open #scroll-box {
+    transform: translateX(0) scaleX(1);
+  }
+  #scroll-box::-webkit-scrollbar { width: 3px; }
+  #scroll-box::-webkit-scrollbar-thumb { background: rgba(200,169,110,.25); border-radius: 2px; }
+
+  /* ===== 卷轴两端装饰 ===== */
+  .scroll-roll {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18px;
+    background: linear-gradient(to right, 
+      var(--accent) 0%, 
+      rgba(200,169,110,.3) 8%,
+      rgba(200,169,110,.3) 92%,
+      var(--accent) 100%
+    );
+    flex-shrink: 0;
+    box-shadow: 
+      0 4px 16px rgba(180,140,255,.2),
+      inset 0 2px 4px rgba(255,255,255,.15);
+    z-index: 2;
+  }
+  .scroll-roll::before,
+  .scroll-roll::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 26px;
+    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.3), rgba(200,169,110,.6) 60%, rgba(180,140,255,.4));
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(200,169,110,.4);
+  }
+  .scroll-roll::before { left: -7px; }
+  .scroll-roll::after { right: -7px; }
+
+  /* ===== 头部 ===== */
+  .scroll-header {
+    position: relative;
+    padding: 20px 32px 16px;
+    border-bottom: 1px solid rgba(200,169,110,.12);
+    background: linear-gradient(135deg, rgba(200,169,110,.05) 0%, transparent 60%);
+  }
+  /* 角落装饰纹 */
+  .scroll-header::before {
+    content: '❋';
+    position: absolute;
+    top: 12px; left: 20px;
+    font-size: .7rem;
+    color: rgba(200,169,110,.25);
+    letter-spacing: .1em;
+  }
+  .scroll-header::after {
+    content: '❋';
+    position: absolute;
+    top: 12px; right: 60px;
+    font-size: .7rem;
+    color: rgba(200,169,110,.25);
+    letter-spacing: .1em;
+  }
+
+  .scroll-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(200,169,110,.3);
+    border-radius: 50%;
+    background: rgba(200,169,110,.05);
+    color: rgba(200,169,110,.7);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    z-index: 5;
+  }
+  .scroll-close:hover { 
+    background: rgba(200,169,110,.15); 
+    color: var(--accent); 
+    border-color: var(--accent);
+    transform: rotate(90deg) scale(1.05);
+    box-shadow: 0 0 16px rgba(200,169,110,.2);
+  }
+  .scroll-icon-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .scroll-icon { font-size: 2.6rem; line-height: 1; }
+  .scroll-season-bar {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(to right, var(--accent), transparent);
+    opacity: .4;
+    border-radius: 1px;
+  }
+  .scroll-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .scroll-name { 
+    font-size: clamp(2.2rem, 6vw, 2.8rem); 
+    font-weight: 900; 
+    letter-spacing: .12em; 
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--accent) 0%, rgba(200,169,110,.6) 50%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(200,169,110,.3));
+  }
+  .scroll-date {
+    display: inline-block;
+    font-size: .78rem;
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid currentColor;
+    letter-spacing: .15em;
+    opacity: .8;
+    white-space: nowrap;
+  }
+  .scroll-poem {
+    margin-top: 14px;
+    padding: 14px 18px;
+    border-left: 2.5px solid var(--accent);
+    background: linear-gradient(135deg, rgba(200,169,110,.06) 0%, transparent 70%);
+    border-radius: 0 10px 10px 0;
+    text-align: left;
+    position: relative;
+  }
+  .scroll-poem::before {
+    content: '"';
+    position: absolute;
+    top: -8px; left: 16px;
+    font-size: 3rem;
+    color: rgba(200,169,110,.15);
+    font-family: serif;
+    line-height: 1;
+  }
+  .scroll-poem-text { font-size: 1.05rem; line-height: 2; letter-spacing: .06em; color: rgba(240,232,216,.9); }
+  .scroll-poem-source { font-size: .72rem; opacity: .55; margin-top: 10px; text-align: right; letter-spacing: .1em; }
+
+  /* ===== 内容区 ===== */
+  .scroll-body { padding: 16px 32px 24px; }
+
+  /* ===== 标签页 ===== */
+  .scroll-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    padding: 4px;
+    background: rgba(200,169,110,.04);
+    border-radius: 30px;
+    border: 1px solid rgba(200,169,110,.1);
+  }
+  .scroll-tab {
+    flex: 1;
+    padding: 10px 12px;
+    font-size: .78rem;
+    letter-spacing: .15em;
+    cursor: pointer;
+    border-radius: 26px;
+    border: none;
+    background: transparent;
+    color: rgba(200,169,110,.5);
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .scroll-tab::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), rgba(200,169,110,.7));
+    opacity: 0;
+    transform: scaleX(0);
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    border-radius: inherit;
+  }
+  .scroll-tab.active { 
+    color: #0e0828;
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(200,169,110,.3);
+  }
+  .scroll-tab.active::before { opacity: 1; transform: scaleX(1); }
+  .scroll-tab span { position: relative; z-index: 1; }
+  .scroll-tab:hover:not(.active) { 
+    color: rgba(200,169,110,.9);
+    background: rgba(200,169,110,.06);
+  }
+
+  .scroll-panel { display: none; opacity: 0; transform: translateY(12px); }
+  .scroll-panel.active { 
+    display: block; 
+    animation: panelReveal .4s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes panelReveal {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== 详情卡片网格 ===== */
+  .scroll-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .scroll-detail-item {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(200,169,110,.03);
+    border: 1px solid rgba(200,169,110,.1);
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: itemReveal .35s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes itemReveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .scroll-detail-item:nth-child(1) { animation-delay: 0ms; }
+  .scroll-detail-item:nth-child(2) { animation-delay: 60ms; }
+  .scroll-detail-item:nth-child(3) { animation-delay: 120ms; }
+  .scroll-detail-item:nth-child(4) { animation-delay: 180ms; }
+  .scroll-detail-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    opacity: .4;
+    transition: opacity .3s;
+  }
+  .scroll-detail-item:hover { 
+    border-color: rgba(200,169,110,.28);
+    background: rgba(200,169,110,.06);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(180,140,255,.1);
+  }
+  .scroll-detail-item:hover::before { opacity: .8; }
+  .scroll-detail-label { 
+    font-size: .62rem; 
+    letter-spacing: .2em; 
+    opacity: .5; 
+    margin-bottom: 8px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .scroll-detail-label::before {
+    content: '◈';
+    font-size: .5rem;
+    opacity: .7;
+  }
+  .scroll-detail-value { font-size: .88rem; line-height: 1.8; letter-spacing: .03em; color: rgba(240,232,216,.88); }
+
+  /* ===== 壁纸生成区域 ===== */
+  .wallpaper-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed rgba(200,169,110,.15);
+  }
+  .wallpaper-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .wallpaper-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(200,169,110,.3), transparent);
+  }
+  .wallpaper-divider-text {
+    font-size: .7rem;
+    letter-spacing: .2em;
+    color: rgba(200,169,110,.6);
+    white-space: nowrap;
+  }
+  
+  /* 尺寸选择器 */
+  .wallpaper-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .wallpaper-size-label {
+    font-size: .72rem;
+    color: rgba(200,169,110,.7);
+    letter-spacing: .1em;
+  }
+  .wallpaper-size-options {
+    display: flex;
+    gap: 10px;
+  }
+  .wallpaper-size-option input {
+    display: none;
+  }
+  .wallpaper-size-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 16px;
+    border: 1px solid rgba(200,169,110,.2);
+    border-radius: 12px;
+    background: rgba(200,169,110,.03);
+    cursor: pointer;
+    transition: all .3s ease;
+  }
+  .wallpaper-size-option input:checked + .wallpaper-size-card {
+    border-color: var(--accent);
+    background: rgba(200,169,110,.1);
+    box-shadow: 0 0 12px rgba(200,169,110,.2);
+  }
+  .wallpaper-size-card:hover {
+    border-color: rgba(200,169,110,.4);
+    background: rgba(200,169,110,.06);
+  }
+  .wallpaper-size-icon { font-size: 1.4rem; }
+  .wallpaper-size-text {
+    font-size: .7rem;
+    color: rgba(200,169,110,.8);
+    letter-spacing: .08em;
+  }
+  .wallpaper-size-ratio {
+    font-size: .6rem;
+    color: rgba(200,169,110,.5);
+    letter-spacing: .05em;
+  }
+  
+  .wallpaper-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .wallpaper-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 1px solid rgba(200,169,110,.4);
+    border-radius: 30px;
+    background: linear-gradient(135deg, rgba(200,169,110,.08) 0%, rgba(200,169,110,.03) 100%);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: .82rem;
+    letter-spacing: .1em;
+    cursor: pointer;
+    transition: all .4s cubic-bezier(.4,0,.2,1);
+  }
+  .wallpaper-btn:hover {
+    background: linear-gradient(135deg, rgba(200,169,110,.15) 0%, rgba(200,169,110,.08) 100%);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(200,169,110,.2);
+  }
+  .wallpaper-btn:active {
+    transform: translateY(0);
+  }
+  .wallpaper-btn.loading {
+    pointer-events: none;
+    opacity: .7;
+  }
+  .wallpaper-btn-icon { font-size: 1.2rem; }
+  .wallpaper-btn-text {}
+  .wallpaper-preview {
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0,0,0,.2);
+    border: 1px solid rgba(200,169,110,.1);
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .wallpaper-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .wallpaper-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: rgba(200,169,110,.4);
+    padding: 30px;
+    text-align: center;
+  }
+  .wallpaper-placeholder-icon { font-size: 2.5rem; opacity: .5; }
+  .wallpaper-placeholder-text {
+    font-size: .75rem;
+    letter-spacing: .1em;
+    line-height: 1.6;
+  }
+  .wallpaper-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 30px;
+  }
+  .wallpaper-loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid rgba(200,169,110,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: wallpaperSpin .8s linear infinite;
+  }
+  @keyframes wallpaperSpin {
+    to { transform: rotate(360deg); }
+  }
+  .wallpaper-loading-text {
+    font-size: .75rem;
+    color: rgba(200,169,110,.6);
+    letter-spacing: .1em;
+  }
+  .wallpaper-download-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 8px 16px;
+    background: rgba(20,11,58,.9);
+    border: 1px solid rgba(200,169,110,.4);
+    border-radius: 20px;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: .72rem;
+    letter-spacing: .1em;
+    cursor: pointer;
+    transition: all .3s ease;
+    backdrop-filter: blur(8px);
+  }
+  .wallpaper-download-btn:hover {
+    background: rgba(200,169,110,.15);
+    border-color: var(--accent);
+  }
+  .wallpaper-tips {
+    margin-top: 10px;
+    text-align: center;
+    font-size: .65rem;
+    color: rgba(200,169,110,.4);
+    letter-spacing: .05em;
+  }
+  
+  /* ===== 动态壁纸效果 ===== */
+  .wallpaper-dynamic {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .wallpaper-dynamic canvas,
+  .wallpaper-dynamic img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  
+  /* 动态粒子层 */
+  .wallpaper-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .wallpaper-particle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleFloat var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes particleFloat {
+    0% {
+      opacity: 0;
+      transform: translateY(100%) rotate(0deg);
+    }
+    10% { opacity: var(--max-opacity); }
+    90% { opacity: var(--max-opacity); }
+    100% {
+      opacity: 0;
+      transform: translateY(-100vh) rotate(360deg);
+    }
+  }
+  
+  /* 雪花飘落效果 */
+  .wallpaper-snowflake {
+    position: absolute;
+    color: rgba(255,255,255,0.8);
+    font-size: var(--size);
+    opacity: 0;
+    animation: snowFall var(--duration) linear infinite;
+    animation-delay: var(--delay);
+    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+  }
+  @keyframes snowFall {
+    0% {
+      opacity: 0;
+      transform: translateY(-20px) rotate(0deg);
+    }
+    10% { opacity: var(--max-opacity); }
+    90% { opacity: var(--max-opacity); }
+    100% {
+      opacity: 0;
+      transform: translateY(var(--fall-distance)) rotate(360deg);
+    }
+  }
+  
+  /* 花瓣飘落效果 */
+  .wallpaper-petal {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    background: var(--petal-color);
+    border-radius: 50% 0 50% 0;
+    opacity: 0;
+    animation: petalFall var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes petalFall {
+    0% {
+      opacity: 0;
+      transform: translateY(-20px) rotate(0deg) scale(1);
+    }
+    10% { opacity: var(--max-opacity); }
+    50% { transform: translateY(50vh) rotate(180deg) scale(0.8); }
+    90% { opacity: var(--max-opacity); }
+    100% {
+      opacity: 0;
+      transform: translateY(var(--fall-distance)) rotate(360deg) scale(0.6);
+    }
+  }
+  
+  /* 星光闪烁效果 */
+  .wallpaper-star {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    background: radial-gradient(circle, #fff 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    animation: starTwinkle var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes starTwinkle {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: var(--max-opacity); transform: scale(1.5); }
+  }
+  
+  /* 萤火虫效果 */
+  .wallpaper-firefly {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    background: radial-gradient(circle, var(--glow-color) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    animation: fireflyGlow var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes fireflyGlow {
+    0%, 100% {
+      opacity: 0;
+      transform: translate(0, 0);
+    }
+    25% { opacity: var(--max-opacity); }
+    50% {
+      opacity: calc(var(--max-opacity) * 0.5);
+      transform: translate(var(--drift-x), var(--drift-y));
+    }
+    75% { opacity: var(--max-opacity); }
+  }
+  
+  /* 流云飘动效果 */
+  .wallpaper-cloud {
+    position: absolute;
+    background: radial-gradient(ellipse, var(--cloud-opacity) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: cloudDrift var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes cloudDrift {
+    0%, 100% { transform: translateX(-20px) scale(1); opacity: var(--max-opacity); }
+    50% { transform: translateX(20px) scale(1.1); opacity: calc(var(--max-opacity) * 0.6); }
+  }
+  
+  /* 水波涟漪效果 */
+  .wallpaper-ripple {
+    position: absolute;
+    border: 1px solid rgba(200,169,110,0.3);
+    border-radius: 50%;
+    animation: rippleExpand var(--duration) ease-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes rippleExpand {
+    0% {
+      width: 0;
+      height: 0;
+      opacity: var(--max-opacity);
+      transform: translate(-50%, -50%);
+    }
+    100% {
+      width: var(--ripple-size);
+      height: var(--ripple-size);
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+  }
+  
+  /* 极光效果 */
+  .wallpaper-aurora {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, 
+      transparent 0%,
+      var(--aurora-color) 50%,
+      transparent 100%
+    );
+    opacity: 0;
+    filter: blur(30px);
+    animation: auroraWave var(--duration) ease-in-out infinite;
+    animation-delay: var(--delay);
+  }
+  @keyframes auroraWave {
+    0%, 100% {
+      opacity: 0;
+      transform: translateX(-10%) scaleY(1);
+    }
+    50% {
+      opacity: 0.15;
+      transform: translateX(10%) scaleY(1.2);
+    }
+  }
+  
+  /* 动态效果容器 */
+  .wallpaper-effects {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* ===== 罗盘可点击 ===== */
+  .compass-node { cursor: pointer; }
+  .compass-node:hover text { fill: var(--accent) !important; }
+
+  /* ===== 墨水扩散动画 ===== */
+  .ink-blob {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    transform: scale(0);
+    animation: inkExpand 1.2s cubic-bezier(.4,0,.2,1) forwards;
+  }
+  @keyframes inkExpand {
+    0% { transform: scale(0); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+
+  /* ===== 量子纠缠动画 ===== */
+  .entangle-cards {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    overflow: hidden;
+  }
+  .entangle-line {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    animation: entangle 2s ease-out forwards;
+  }
+  @keyframes entangle {
+    0% { opacity: 0; transform: scaleX(0); }
+    30% { opacity: 0.6; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(1) translateY(50px); }
+  }
+
+  /* ===== 响应式 ===== */
+  @media (max-width: 768px) {
+    header { padding: 15px 20px; }
+    nav a { padding: 6px 12px; font-size: .7rem; }
+    .jieqi-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .grid-icon { font-size: 1.4rem; }
+    .grid-name { font-size: .7rem; }
+    #main-content { padding: 40px 20px; }
+    .scroll-header { padding: 16px 20px 12px; }
+    .scroll-body { padding: 14px 18px 20px; }
+    .scroll-name { font-size: 2rem; }
+    .scroll-icon { font-size: 2rem; }
+    .scroll-poem { padding: 10px 14px; margin-top: 10px; }
+    .scroll-poem-text { font-size: .95rem; }
+    .scroll-detail-grid { grid-template-columns: 1fr; }
+    .scroll-detail-item { padding: 10px 12px; }
+    .wallpaper-preview { min-height: 150px; }
+    .wallpaper-btn { padding: 10px 20px; font-size: .78rem; }
+    .wallpaper-size-selector { flex-direction: column; gap: 8px; }
+    .wallpaper-size-options { gap: 8px; }
+    .wallpaper-size-card { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 进度条 -->
+<div id="progress-bar"></div>
+
+<!-- 粒子画布 -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- 星辰背景 -->
+<div id="starfield"></div>
+
+<!-- 量子纠缠效果容器 -->
+<div class="entangle-cards" id="entangle-container"></div>
+
+<!-- ===== 卷轴详情弹窗 ===== -->
+<div id="scroll-overlay">
+  <div id="scroll-bg"></div>
+  <div id="scroll-box">
+    <!-- 卷轴顶轴装饰 -->
+    <div class="scroll-roll"></div>
+
+    <div class="scroll-header" id="scroll-header">
+      <button class="scroll-close" id="scroll-close"><span>✕</span></button>
+      <div class="scroll-icon-wrap">
+        <span class="scroll-icon" id="scroll-icon"></span>
+        <div class="scroll-season-bar"></div>
+      </div>
+      <div class="scroll-name-row">
+        <div class="scroll-name" id="scroll-name"></div>
+        <span class="scroll-date" id="scroll-date"></span>
+      </div>
+      <div class="scroll-poem" id="scroll-poem">
+        <div class="scroll-poem-text" id="scroll-poem-text"></div>
+        <div class="scroll-poem-source" id="scroll-poem-source"></div>
+      </div>
+    </div>
+
+    <div class="scroll-body">
+      <div class="scroll-tabs">
+        <div class="scroll-tab active" data-tab="0"><span>物候</span></div>
+        <div class="scroll-tab" data-tab="1"><span>农事</span></div>
+        <div class="scroll-tab" data-tab="2"><span>养生</span></div>
+        <div class="scroll-tab" data-tab="3"><span>饮食</span></div>
+      </div>
+      <div class="scroll-panel active" id="scroll-panel-0"></div>
+      <div class="scroll-panel" id="scroll-panel-1"></div>
+      <div class="scroll-panel" id="scroll-panel-2"></div>
+      <div class="scroll-panel" id="scroll-panel-3"></div>
+      
+      <!-- 壁纸生成区域 -->
+      <div class="wallpaper-section">
+        <div class="wallpaper-divider">
+          <span class="wallpaper-divider-line"></span>
+          <span class="wallpaper-divider-text">✦ 壁纸生成 ✦</span>
+          <span class="wallpaper-divider-line"></span>
+        </div>
+        
+        <!-- 尺寸选择 -->
+        <div class="wallpaper-size-selector">
+          <span class="wallpaper-size-label">选择尺寸：</span>
+          <div class="wallpaper-size-options">
+            <label class="wallpaper-size-option">
+              <input type="radio" name="wallpaper-size" value="mobile" checked>
+              <span class="wallpaper-size-card">
+                <span class="wallpaper-size-icon">📱</span>
+                <span class="wallpaper-size-text">手机壁纸</span>
+                <span class="wallpaper-size-ratio">9:16</span>
+              </span>
+            </label>
+            <label class="wallpaper-size-option">
+              <input type="radio" name="wallpaper-size" value="desktop">
+              <span class="wallpaper-size-card">
+                <span class="wallpaper-size-icon">🖥️</span>
+                <span class="wallpaper-size-text">电脑壁纸</span>
+                <span class="wallpaper-size-ratio">16:9</span>
+              </span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="wallpaper-actions">
+          <button class="wallpaper-btn" id="generate-wallpaper">
+            <span class="wallpaper-btn-icon">🎨</span>
+            <span class="wallpaper-btn-text">一键生成壁纸</span>
+          </button>
+        </div>
+        <div class="wallpaper-preview" id="wallpaper-preview">
+          <div class="wallpaper-placeholder">
+            <span class="wallpaper-placeholder-icon">🖼️</span>
+            <span class="wallpaper-placeholder-text">点击上方按钮<br>生成专属节气壁纸</span>
+          </div>
+        </div>
+        <div class="wallpaper-tips">
+          <span>💡 支持动态效果，右键或点击下载保存</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 卷轴底轴装饰 -->
+    <div class="scroll-roll"></div>
+  </div>
+</div>
+
+<!-- 导航 -->
+<header>
+  <div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">廿四節氣</div>
+  <nav>
+    <a href="#hero">首页</a>
+    <a href="#compass-section">节气盘</a>
+  </nav>
+</header>
+
+<!-- ===== 首屏 ===== -->
+<section id="hero">
+  <div class="deco-ring"></div>
+  <div class="deco-ring"></div>
+  <div class="deco-ring"></div>
+
+  <span class="float-char" style="top:15%;left:8%;animation-delay:0s">春</span>
+  <span class="float-char" style="top:20%;right:10%;animation-delay:1s">夏</span>
+  <span class="float-char" style="bottom:25%;left:6%;animation-delay:2s">秋</span>
+  <span class="float-char" style="bottom:20%;right:8%;animation-delay:3s">冬</span>
+
+  <svg class="brush-title" viewBox="0 0 640 120" xmlns="http://www.w3.org/2000/svg">
+    <text x="50%" y="95" text-anchor="middle" style="font-family:'STKaiti','KaiTi',serif;font-size:90px;fill:none;stroke:var(--accent);stroke-width:1.2;stroke-dasharray:3000;stroke-dashoffset:3000;animation:brushDraw 3s cubic-bezier(.4,0,.2,1) forwards .4s">时令诗境</text>
+    <text x="50%" y="95" text-anchor="middle" style="font-family:'STKaiti','KaiTi',serif;font-size:90px;fill:rgba(200,169,110,0.1);stroke:none;opacity:0;animation:fadeUp .5s ease forwards 3.2s">时令诗境</text>
+  </svg>
+
+  <p class="hero-sub">二十四节气 · 中国传统时令文化</p>
+  <p class="hero-desc">春雨惊春清谷天 &emsp; 夏满芒夏暑相连<br>秋处露秋寒霜降 &emsp; 冬雪雪冬小大寒</p>
+
+  <div class="scroll-hint">
+    <span>向下探索</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ===== 主内容区 ===== -->
+<main id="main-content">
+
+  <!-- ===== 节气罗盘 ===== -->
+  <section id="compass-section">
+    <div class="section-title reveal">节气时轮</div>
+    <div class="section-sub reveal">以圆盘承载时序 · 点击节气查看详情</div>
+    <div class="compass-wrap reveal">
+      <svg id="compass-svg" viewBox="0 0 460 460" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </section>
+
+</main>
+
+<!-- 底部 -->
+<footer>
+  <p>二十四节气 · 时令诗境 &emsp;|&emsp; 中国传统时令文化</p>
+</footer>
+
+<script>
+// ============================================================
+//  数据
+// ============================================================
+const JIEQI = [
+  { name:'立春', date:'2月4日',  icon:'🌱', season:'spring', poem:'东风解冻，蛰虫始振', poet:'《礼记·月令》', meaning:'春回大地，万物复苏的开始', bg:'梅',
+    phenology:['东风解冻','蛰虫始振','鱼陟负冰','雁候北归'],
+    farming:['开始备耕','防倒春寒','春小麦播种','施基肥'],
+    health:['疏肝理气','早睡早起','适当锻炼','防风保暖'],
+    food:['韭菜','春笋','豆芽','萝卜']
+  },
+  { name:'雨水', date:'2月19日', icon:'🌧️', season:'spring', poem:'好雨知时节，当春乃发生', poet:'杜甫《春夜喜雨》', meaning:'雨水增多，滋润万物生长', bg:'雨',
+    phenology:['獭祭鱼','候雁北','草木萌动','春雨初降'],
+    farming:['冬小麦返青','追施氮肥','整修水利','温室育苗'],
+    health:['健脾利湿','少食生冷','多喝热粥','避免阴湿'],
+    food:['莴苣','菠菜','百合','蜂蜜']
+  },
+  { name:'惊蛰', date:'3月6日',  icon:'⚡', season:'spring', poem:'一声雷动万虫惊，柳色青青已满城', poet:'宋·佚名', meaning:'春雷惊醒冬眠的虫子', bg:'蛰',
+    phenology:['桃始华','仓庚鸣','鹰化为鸠','春雷响'],
+    farming:['防治病虫害','冬小麦起身','播种棉花','顶凌耙地'],
+    health:['养肝护肝','多食梨','提升阳气','适量运动'],
+    food:['梨','春韭','樱桃','枸杞']
+  },
+  { name:'春分', date:'3月21日', icon:'☯️', season:'spring', poem:'春分雨脚落声微，柳岸斜风带客归', poet:'宋·徐铉', meaning:'昼夜等长，春季中点', bg:'分',
+    phenology:['玄鸟至','雷乃发声','始电现','昼夜等分'],
+    farming:['春耕春种','油菜花开','防倒春寒','灌溉施肥'],
+    health:['平衡阴阳','调畅情志','户外踏青','谨慎进补'],
+    food:['菠菜','荠菜','豆腐','鸡蛋']
+  },
+  { name:'清明', date:'4月5日',  icon:'🌿', season:'spring', poem:'清明时节雨纷纷，路上行人欲断魂', poet:'杜牧《清明》', meaning:'清洁明净，祭祖扫墓时节', bg:'明',
+    phenology:['桐始华','田鼠化为鴽','虹始见','草木清明'],
+    farming:['华南早稻移栽','棉花播种','春茶采摘','防病治虫'],
+    health:['疏肝解郁','踏青赏花','防过敏','调节情绪'],
+    food:['青团','螺蛳','马兰头','艾草']
+  },
+  { name:'谷雨', date:'4月20日', icon:'🌾', season:'spring', poem:'谷雨如丝复似尘，煮瓯浮蜡正尝新', poet:'元·方回', meaning:'雨生百谷，春季最后节气', bg:'谷',
+    phenology:['萍始生','鸣鸠拂其羽','戴胜降于桑','谷雨'],
+    farming:['棉花种植高峰','春茶最佳时节','玉米播种','防止晚霜'],
+    health:['祛湿健脾','少食酸','温补气血','适当出汗'],
+    food:['香椿','谷雨茶','草莓','豌豆']
+  },
+  { name:'立夏', date:'5月6日',  icon:'☀️', season:'summer', poem:'绿树荫浓夏日长，楼台倒影入池塘', poet:'高骈《山亭夏日》', meaning:'夏天正式开始，万物繁茂', bg:'夏',
+    phenology:['蝼蝈鸣','蚯蚓出','王瓜生','苦菜秀'],
+    farming:['中稻播种','棉花定苗','防涝准备','施追肥'],
+    health:['养心护心','午休养神','清淡饮食','防暑湿'],
+    food:['苦瓜','绿豆','西瓜','薏米']
+  },
+  { name:'小满', date:'5月21日', icon:'🌻', season:'summer', poem:'小满江河涨，农田麦谷黄', poet:'民谚', meaning:'麦类等夏熟作物籽粒渐满', bg:'满',
+    phenology:['苦菜秀','靡草死','麦秋至','蚕丝结'],
+    farming:['冬小麦灌浆','防治小麦病','早稻追肥','抗旱防涝'],
+    health:['清热利湿','多食蔬菜','忌过饱','防皮肤病'],
+    food:['苋菜','桑葚','薏米','冬瓜']
+  },
+  { name:'芒种', date:'6月6日',  icon:'🌾', season:'summer', poem:'时雨及芒种，四野皆插秧', poet:'陆游《时雨》', meaning:'有芒的作物开始播种', bg:'种',
+    phenology:['螳螂生','鵙始鸣','反舌无声','送花神'],
+    farming:['麦收大忙','水稻插秧','棉田管理','防汛备旱'],
+    health:['防暑祛湿','宜晚睡早起','多饮水','避免劳累'],
+    food:['杨梅','荔枝','绿豆粥','乌梅汤']
+  },
+  { name:'夏至', date:'6月21日', icon:'🔆', season:'summer', poem:'竹深树密虫鸣处，时有微凉不是风', poet:'杨万里《夏夜追凉》', meaning:'一年中白昼最长的一天', bg:'至',
+    phenology:['鹿角解','蜩始鸣','半夏生','白昼最长'],
+    farming:['春玉米拔节','水稻分蘖','防高温热害','中耕除草'],
+    health:['冬病夏治','养心静神','适量运动','忌贪凉'],
+    food:['面条','荔枝','绿豆汤','苦瓜']
+  },
+  { name:'小暑', date:'7月7日',  icon:'🌡️', season:'summer', poem:'倏忽温风至，因循小暑来', poet:'元稹《咏廿四气诗》', meaning:'天气开始炎热，还未到最热', bg:'暑',
+    phenology:['温风至','蟋蟀居壁','鹰始挚','雷雨频繁'],
+    farming:['棉花打顶','防涝抗旱','早稻穗期','玉米授粉'],
+    health:['清暑益气','防中暑','保护阳气','少食辛辣'],
+    food:['黄鳝','莲藕','绿豆','冬瓜']
+  },
+  { name:'大暑', date:'7月23日', icon:'🔥', season:'summer', poem:'大暑三秋近，林钟九夏移', poet:'元稹《咏廿四气诗》', meaning:'一年中最炎热的节气', bg:'炎',
+    phenology:['腐草为萤','土润溽暑','大雨时行','极热之时'],
+    farming:['早稻收割','晚稻插秧','防台风','棉田治虫'],
+    health:['防暑降温','补充水分','冬病夏治','心静自凉'],
+    food:['羊肉','荔枝','西瓜','薏米粥']
+  },
+  { name:'立秋', date:'8月7日',  icon:'🍂', season:'autumn', poem:'睡起秋声无觅处，满阶梧叶月明中', poet:'刘翰《立秋》', meaning:'秋季开始，暑去凉来', bg:'秋',
+    phenology:['凉风至','白露降','寒蝉鸣','梧叶落'],
+    farming:['早稻收割','晚稻追肥','棉花裂铃','秋耕准备'],
+    health:['滋阴润燥','早睡早起','舒缓情绪','贴秋膘'],
+    food:['茄子','西红柿','玉米','莲藕']
+  },
+  { name:'处暑', date:'8月23日', icon:'🍁', season:'autumn', poem:'离离暑云散，袅袅凉风起', poet:'白居易《早秋曲江感怀》', meaning:'出暑，炎热即将结束', bg:'处',
+    phenology:['鹰乃祭鸟','天地始肃','禾乃登','暑气渐退'],
+    farming:['棉花吐絮','春玉米收割','秋季蔬菜播种','防秋旱'],
+    health:['润燥滋阴','防秋燥','早睡早起','适当锻炼'],
+    food:['鸭肉','百合','银耳','梨']
+  },
+  { name:'白露', date:'9月8日',  icon:'💧', season:'autumn', poem:'蒹葭苍苍，白露为霜', poet:'《诗经·蒹葭》', meaning:'天气转凉，露水凝结成白色', bg:'露',
+    phenology:['鸿雁来','玄鸟归','群鸟养羞','露白如珠'],
+    farming:['晚稻抽穗','棉花收摘','秋收作物成熟','防秋雨'],
+    health:['养肺益胃','防秋燥','滋阴润肺','防过敏'],
+    food:['梨','枸杞','银耳','蜂蜜']
+  },
+  { name:'秋分', date:'9月23日', icon:'🌕', season:'autumn', poem:'金风玉露一相逢，便胜却人间无数', poet:'秦观《鹊桥仙》', meaning:'秋季中点，昼夜再次等长', bg:'分',
+    phenology:['雷始收声','蛰虫坯户','水始涸','昼夜等分'],
+    farming:['秋收大忙','冬小麦播种','大豆收割','秋施基肥'],
+    health:['平衡阴阳','预防胃病','早睡早起','调节情绪'],
+    food:['芋头','石榴','葡萄','桂花糕']
+  },
+  { name:'寒露', date:'10月8日', icon:'🌫️', season:'autumn', poem:'袅袅凉风动，凄凄寒露零', poet:'白居易《池上》', meaning:'露水更冷，将近凝结成霜', bg:'寒',
+    phenology:['鸿雁宾','雀入水为蛤','菊有黄华','寒气渐重'],
+    farming:['北方冬小麦播种','棉花采收','翻耕土地','防霜冻'],
+    health:['防寒保暖','养阴防燥','登高望远','护足保暖'],
+    food:['菊花酒','螃蟹','苹果','红薯']
+  },
+  { name:'霜降', date:'10月23日', icon:'❄️', season:'autumn', poem:'停车坐爱枫林晚，霜叶红于二月花', poet:'杜牧《山行》', meaning:'天气渐冷，开始有霜', bg:'霜',
+    phenology:['豺乃祭兽','草木黄落','蛰虫咸俯','枫叶红遍'],
+    farming:['秋收扫尾','冬小麦出苗','大白菜收获','牲畜入圈'],
+    health:['补冬防寒','健脾养胃','防外感','早睡晚起'],
+    food:['柿子','牛肉','栗子','萝卜']
+  },
+  { name:'立冬', date:'11月7日', icon:'🍃', season:'winter', poem:'冻笔新诗懒写，寒炉美酒时温', poet:'李白《立冬》', meaning:'冬季开始，万物收藏', bg:'冬',
+    phenology:['水始冰','地始冻','雉入大水为蜃','万物收藏'],
+    farming:['冬小麦出苗','积造农肥','修缮农具','兴修水利'],
+    health:['温补肾阳','早睡晚起','防风寒','适当进补'],
+    food:['羊肉','饺子','栗子','核桃']
+  },
+  { name:'小雪', date:'11月22日', icon:'🌨️', season:'winter', poem:'莫怪虹无影，如今小雪时', poet:'元稹《咏廿四气诗》', meaning:'开始降雪，但雪量较小', bg:'雪',
+    phenology:['虹藏不见','天气上升','地气下降','初降小雪'],
+    farming:['冬小麦冬灌','果树剪枝','温室蔬菜','防积雪压坏'],
+    health:['温阳御寒','防寒保暖','调畅情志','补肾益精'],
+    food:['腌腊肉','萝卜','白菜','羊肉锅']
+  },
+  { name:'大雪', date:'12月7日', icon:'❄️', season:'winter', poem:'忽如一夜春风来，千树万树梨花开', poet:'岑参《白雪歌送武判官》', meaning:'降雪量增大，地面积雪', bg:'大',
+    phenology:['鹖鴠不鸣','虎始交','荔挺出','大雪封地'],
+    farming:['农田积雪保墒','果树防冻','清扫积雪','修缮仓库'],
+    health:['温补气血','防寒保暖','补肾固精','少食生冷'],
+    food:['鸡肉','枸杞','红枣','狗肉']
+  },
+  { name:'冬至', date:'12月22日', icon:'🌑', season:'winter', poem:'天时人事日相催，冬至阳生春又来', poet:'杜甫《小至》', meaning:'一年中白昼最短的一天', bg:'至',
+    phenology:['蚯蚓结','麋角解','水泉动','阳气初生'],
+    farming:['兴修水利','积肥造肥','温室育苗','冬耕冻土'],
+    health:['滋补肾阳','冬至进补','防心脑血管','保暖头足'],
+    food:['饺子','汤圆','羊肉汤','红豆粥']
+  },
+  { name:'小寒', date:'1月6日',  icon:'🧊', season:'winter', poem:'小寒惟有梅花俏，雪虐风饕亦自开', poet:'宋·佚名', meaning:'天气寒冷，但未到最冷', bg:'寒',
+    phenology:['雁北乡','鹊始巢','雉始鸲','梅花傲雪'],
+    farming:['积肥造肥','小麦追肥','防冻保苗','温室管理'],
+    health:['温补脾肾','多晒太阳','防寒防冻','补充热量'],
+    food:['腊八粥','芝麻','核桃','羊肉']
+  },
+  { name:'大寒', date:'1月20日', icon:'🌬️', season:'winter', poem:'大寒须守火，无事莫出门', poet:'民谚', meaning:'一年中最寒冷的节气', bg:'寒',
+    phenology:['鸡乳','征鸟厉疾','水泽腹坚','极寒之时'],
+    farming:['整修农具','积肥备耕','温室保温','防大雪灾害'],
+    health:['温阳散寒','早睡晚起','多喝热汤','防心梗'],
+    food:['鸡汤','糯米饭','八宝粥','姜糖水']
+  }
+];
+
+const QUOTES = [
+  { text:'春眠不觉晓，处处闻啼鸟。<br>夜来风雨声，花落知多少。', author:'孟浩然《春晓》' },
+  { text:'接天莲叶无穷碧，<br>映日荷花别样红。', author:'杨万里《晓出净慈寺送林子方》' },
+  { text:'自古逢秋悲寂寥，<br>我言秋日胜春朝。', author:'刘禹锡《秋词》' },
+  { text:'墙角数枝梅，<br>凌寒独自开。', author:'王安石《梅花》' },
+  { text:'春江潮水连海平，<br>海上明月共潮生。', author:'张若虚《春江花月夜》' }
+];
+
+const SEASON_COLOR = { spring:'#6fcf97', summer:'#eb5757', autumn:'#f2994a', winter:'#56ccf2' };
+const SEASON_HUE = { spring: '0deg', summer: '20deg', autumn: '-10deg', winter: '180deg' };
+
+// ============================================================
+//  当前节气判断
+// ============================================================
+function getCurrentJieqi() {
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const ranges = [
+    [1,20,'大寒'],[2,4,'立春'],[2,19,'雨水'],[3,6,'惊蛰'],[3,21,'春分'],
+    [4,5,'清明'],[4,20,'谷雨'],[5,6,'立夏'],[5,21,'小满'],[6,6,'芒种'],
+    [6,21,'夏至'],[7,7,'小暑'],[7,23,'大暑'],[8,7,'立秋'],[8,23,'处暑'],
+    [9,8,'白露'],[9,23,'秋分'],[10,8,'寒露'],[10,23,'霜降'],[11,7,'立冬'],
+    [11,22,'小雪'],[12,7,'大雪'],[12,22,'冬至'],[12,31,'小寒']
+  ];
+  let cur = '大寒';
+  for(const [rm,rd,name] of ranges) {
+    if(m > rm || (m===rm && d>=rd)) cur = name;
+  }
+  return cur;
+}
+
+// ============================================================
+//  星辰背景
+// ============================================================
+function createStarfield() {
+  const container = document.getElementById('starfield');
+  for(let i = 0; i < 180; i++) {
+    const star = document.createElement('div');
+    const rand = Math.random();
+    const size = rand < 0.6 ? 'small' : (rand < 0.9 ? 'medium' : 'large');
+    star.className = `star ${size}`;
+    star.style.cssText = `
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 100}%;
+      --duration: ${2 + Math.random() * 4}s;
+      --delay: ${Math.random() * 3}s;
+      --base-opacity: ${0.4 + Math.random() * 0.5};
+    `;
+    container.appendChild(star);
+  }
+}
+createStarfield();
+
+// ============================================================
+//  粒子系统
+// ============================================================
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let mouse = { x: -1000, y: -1000 };
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 1.5 + 0.3;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.life = 0;
+    this.maxLife = Math.random() * 300 + 200;
+    const colors = ['200,169,110', '240,232,216', '180,200,255', '86,204,242'];
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+  }
+  update() {
+    const dx = this.x - mouse.x;
+    const dy = this.y - mouse.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < 120) {
+      const force = (120 - dist) / 120 * 0.8;
+      this.vx += (dx/dist) * force;
+      this.vy += (dy/dist) * force;
+    }
+    this.vx *= 0.98; this.vy *= 0.98;
+    this.x += this.vx; this.y += this.vy;
+    this.life++;
+    if(this.life > this.maxLife || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+  }
+  draw() {
+    const alpha = Math.min(this.life/60, 1 - this.life/this.maxLife) * 0.6;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${this.color},${alpha})`;
+    ctx.fill();
+  }
+}
+
+function initParticles() {
+  particles = Array.from({length: 50}, () => new Particle());
+}
+function animateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for(let i = 0; i < particles.length; i++) {
+    particles[i].update(); particles[i].draw();
+    for(let j = i+1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if(d < 80) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(139,115,85,${(1-d/80)*0.08})`;
+        ctx.lineWidth = 0.5; ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(animateParticles);
+}
+resizeCanvas(); initParticles(); animateParticles();
+window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+
+// ============================================================
+//  鼠标追踪（简化版，仅用于粒子系统）
+// ============================================================
+function createInkBlob(x, y, color = '200,169,110') {
+  const blob = document.createElement('div');
+  blob.className = 'ink-blob';
+  blob.style.cssText = `
+    left: ${x}px;
+    top: ${y}px;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(${color},0.6) 0%, transparent 70%);
+  `;
+  document.body.appendChild(blob);
+  setTimeout(() => blob.remove(), 1200);
+}
+
+// ============================================================
+//  量子纠缠效果
+// ============================================================
+function createEntangleEffect(x, y) {
+  const container = document.getElementById('entangle-container');
+  
+  for(let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const line = document.createElement('div');
+      line.className = 'entangle-line';
+      const angle = Math.random() * Math.PI * 2;
+      const len = 50 + Math.random() * 80;
+      const endX = x + Math.cos(angle) * len;
+      const endY = y + Math.sin(angle) * len;
+      
+      line.style.cssText = `
+        left: ${x}px;
+        top: ${y}px;
+        width: ${len}px;
+        transform-origin: 0 50%;
+        transform: rotate(${angle}rad);
+      `;
+      container.appendChild(line);
+      setTimeout(() => line.remove(), 2000);
+    }, i * 100);
+  }
+}
+
+// ============================================================
+//  涟漪效果
+// ============================================================
+function createRipple(e, el) {
+  const rect = el.getBoundingClientRect();
+  const ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `
+    width: ${size}px;
+    height: ${size}px;
+    left: ${e.clientX - rect.left - size/2}px;
+    top: ${e.clientY - rect.top - size/2}px;
+  `;
+  el.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 800);
+}
+
+// ============================================================
+//  色相偏移主题
+// ============================================================
+function updateSeasonTheme() {
+  const currentName = getCurrentJieqi();
+  const jq = JIEQI.find(j => j.name === currentName);
+  if(jq) {
+    const hue = SEASON_HUE[jq.season] || '0deg';
+    document.body.style.setProperty('--hue-shift', hue);
+  }
+}
+updateSeasonTheme();
+
+// ============================================================
+//  节气罗盘
+// ============================================================
+function buildCompass() {
+  const svg = document.getElementById('compass-svg');
+  const cx = 230, cy = 230, r1 = 190, r2 = 145, r3 = 100;
+  const currentName = getCurrentJieqi();
+  let html = '';
+
+  const seasons = [
+    { color:'#6fcf97', start:0, end:6 },{ color:'#eb5757', start:6, end:12 },
+    { color:'#f2994a', start:12, end:18 },{ color:'#56ccf2', start:18, end:24 }
+  ];
+  seasons.forEach(s => {
+    const a1=(s.start/24)*360-90, a2=(s.end/24)*360-90;
+    const x1=cx+r1*Math.cos(a1*Math.PI/180), y1=cy+r1*Math.sin(a1*Math.PI/180);
+    const x2=cx+r1*Math.cos(a2*Math.PI/180), y2=cy+r1*Math.sin(a2*Math.PI/180);
+    html += `<path d="M${cx},${cy} L${x1},${y1} A${r1},${r1} 0 0,1 ${x2},${y2} Z" fill="${s.color}" opacity="0.04"/>`;
+  });
+  [r1,r2,r3,55].forEach(r => {
+    html += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(200,169,110,0.15)" stroke-width="1"/>`;
+  });
+
+  JIEQI.forEach((jq, i) => {
+    const angle = (i/24)*360-90, rad = angle*Math.PI/180;
+    const isCurrent = jq.name === currentName;
+    const lx1=cx+r2*Math.cos(rad), ly1=cy+r2*Math.sin(rad);
+    const lx2=cx+(r2+18)*Math.cos(rad), ly2=cy+(r2+18)*Math.sin(rad);
+    const tr=r1+10, tx=cx+tr*Math.cos(rad), ty=cy+tr*Math.sin(rad);
+    const rotate=angle+90;
+    const ir=r3-10, ix=cx+ir*Math.cos(rad), iy=cy+ir*Math.sin(rad);
+    const hitR=r2+25, hx=cx+hitR*Math.cos(rad), hy=cy+hitR*Math.sin(rad);
+
+    html += `<g class="compass-node" data-name="${jq.name}" style="cursor:pointer">
+      <circle cx="${hx}" cy="${hy}" r="18" fill="transparent"/>
+      <line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="${isCurrent?'var(--accent)':'rgba(200,169,110,0.35)'}" stroke-width="${isCurrent?2:1}"/>
+      <text x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle"
+        font-size="${isCurrent?13:10}" fill="${isCurrent?'var(--accent)':'rgba(240,232,216,0.6)'}"
+        font-family="'Noto Serif SC','STSong',serif" font-weight="${isCurrent?700:400}"
+        transform="rotate(${rotate},${tx},${ty})">${jq.name}</text>
+      <text x="${ix}" y="${iy}" text-anchor="middle" dominant-baseline="middle" font-size="11">${jq.icon}</text>
+      ${isCurrent ? `<circle cx="${cx+(r2+8)*Math.cos(rad)}" cy="${cy+(r2+8)*Math.sin(rad)}" r="5" fill="var(--accent)" opacity="0.9"><animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/><animate attributeName="r" values="5;7;5" dur="2s" repeatCount="indefinite"/></circle>` : ''}
+    </g>`;
+  });
+
+  html += `<circle cx="${cx}" cy="${cy}" r="52" fill="rgba(20,11,58,0.9)" stroke="rgba(180,140,255,0.35)" stroke-width="1"/>
+    <text x="${cx}" y="${cy-10}" text-anchor="middle" font-size="18" fill="var(--accent)" font-family="'STKaiti','KaiTi',serif">节气</text>
+    <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="10" fill="rgba(180,140,255,0.6)" letter-spacing="2">TIME WHEEL</text>`;
+
+  const curIdx = JIEQI.findIndex(j => j.name === currentName);
+  if(curIdx >= 0) {
+    const pAngle=(curIdx/24)*360-90, pRad=pAngle*Math.PI/180;
+    const px=cx+(r3-5)*Math.cos(pRad), py=cy+(r3-5)*Math.sin(pRad);
+    html += `<line x1="${cx}" y1="${cy}" x2="${px}" y2="${py}" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>`;
+    html += `<circle cx="${cx}" cy="${cy}" r="4" fill="var(--accent)"/>`;
+  }
+  svg.innerHTML = html;
+
+  svg.querySelectorAll('.compass-node').forEach(node => {
+    node.addEventListener('click', (e) => {
+      const jq = JIEQI.find(j => j.name === node.dataset.name);
+      if(jq) {
+        createInkBlob(e.clientX, e.clientY, SEASON_COLOR[jq.season].replace('#','').match(/.{2}/g).map(x=>parseInt(x,16)).join(','));
+        createEntangleEffect(e.clientX, e.clientY);
+        openScrollModal(jq);
+      }
+    });
+  });
+}
+buildCompass();
+
+// ============================================================
+//  卷轴详情弹窗
+// ============================================================
+function openScrollModal(jq) {
+  const color = SEASON_COLOR[jq.season];
+  const overlay = document.getElementById('scroll-overlay');
+  const header = document.getElementById('scroll-header');
+  
+  header.style.borderBottomColor = color + '20';
+  document.getElementById('scroll-icon').textContent = jq.icon;
+  const nameEl = document.getElementById('scroll-name');
+  nameEl.textContent = jq.name;
+  nameEl.style.background = `linear-gradient(135deg, ${color} 0%, rgba(200,169,110,.7) 50%, ${color} 100%)`;
+  nameEl.style.webkitBackgroundClip = 'text';
+  nameEl.style.webkitTextFillColor = 'transparent';
+  nameEl.style.backgroundClip = 'text';
+  
+  const dateEl = document.getElementById('scroll-date');
+  dateEl.textContent = jq.date;
+  dateEl.style.color = color;
+  dateEl.style.borderColor = color;
+  
+  document.getElementById('scroll-poem-text').textContent = jq.poem;
+  document.getElementById('scroll-poem-source').textContent = '—— ' + jq.poet;
+  document.getElementById('scroll-poem').style.borderLeftColor = color;
+
+  // 填充面板
+  const panels = [
+    { id:'scroll-panel-0', labels:['初候','二候','三候','四候'], data: jq.phenology },
+    { id:'scroll-panel-1', labels:['农事一','农事二','农事三','农事四'], data: jq.farming },
+    { id:'scroll-panel-2', labels:['养生一','养生二','养生三','养生四'], data: jq.health },
+    { id:'scroll-panel-3', labels:['食材一','食材二','食材三','食材四'], data: jq.food },
+  ];
+  
+  panels.forEach(p => {
+    const container = document.getElementById(p.id);
+    container.innerHTML = '';
+    p.data.forEach((val, i) => {
+      container.innerHTML += `<div class="scroll-detail-item">
+        <div class="scroll-detail-label">${p.labels[i]}</div>
+        <div class="scroll-detail-value">${val}</div>
+      </div>`;
+    });
+  });
+
+  // 重置标签页
+  document.querySelectorAll('.scroll-tab').forEach((t,i) => {
+    t.classList.toggle('active', i===0);
+  });
+  document.querySelectorAll('.scroll-panel').forEach((p,i) => p.classList.toggle('active', i===0));
+  
+  // 重置壁纸区域
+  currentWallpaperData = null;
+  document.getElementById('wallpaper-preview').innerHTML = `
+    <div class="wallpaper-placeholder">
+      <span class="wallpaper-placeholder-icon">🖼️</span>
+      <span class="wallpaper-placeholder-text">点击上方按钮<br>生成专属节气壁纸</span>
+    </div>
+  `;
+  const genBtn = document.getElementById('generate-wallpaper');
+  genBtn.classList.remove('loading');
+  genBtn.innerHTML = '<span class="wallpaper-btn-icon">🎨</span><span class="wallpaper-btn-text">一键生成壁纸</span>';
+
+  overlay.classList.add('open');
+}
+
+function closeScrollModal() { document.getElementById('scroll-overlay').classList.remove('open'); }
+document.getElementById('scroll-close').addEventListener('click', closeScrollModal);
+document.getElementById('scroll-bg').addEventListener('click', closeScrollModal);
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeScrollModal(); });
+
+// 标签页切换
+document.querySelectorAll('.scroll-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const idx = +tab.dataset.tab;
+    document.querySelectorAll('.scroll-tab').forEach((t,i) => {
+      t.classList.toggle('active', i===idx);
+    });
+    document.querySelectorAll('.scroll-panel').forEach((p,i) => {
+      p.classList.remove('active');
+      void p.offsetWidth; // 触发重排以重置动画
+    });
+    document.querySelectorAll('.scroll-panel')[idx].classList.add('active');
+  });
+});
+
+// ============================================================
+//  壁纸生成功能
+// ============================================================
+let currentWallpaperData = null;
+
+function generateWallpaperPrompt(jq, sizeType) {
+  const seasonPrompts = {
+    spring: '春天盛开的桃花、翠绿的柳枝、温暖的阳光、清新的空气、飘落的花瓣',
+    summer: '炽热的阳光、茂盛的荷叶、蝉鸣声声、繁星闪烁的夜空、萤火虫飞舞',
+    autumn: '金黄的枫叶、丰收的稻田、皎洁的明月、南飞的大雁、飘落的树叶',
+    winter: '飘落的雪花、傲骨的梅花、寂静的村庄、温暖的炉火、冰晶闪烁'
+  };
+  const seasonText = seasonPrompts[jq.season] || '四季变换';
+  const ratio = sizeType === 'mobile' ? '竖版手机壁纸 9:16' : '横版电脑壁纸 16:9';
+  return `${jq.name}节气，${jq.date}，${jq.poem}，${jq.meaning}。${seasonText}，中国传统文化水墨画风格`;
+}
+
+// 动态效果配置
+const DYNAMIC_EFFECTS = {
+  spring: { type: 'petal', icon: '🌸', particleCount: 15 },
+  summer: { type: 'firefly', icon: '✨', particleCount: 20 },
+  autumn: { type: 'leaf', icon: '🍂', particleCount: 12 },
+  winter: { type: 'snow', icon: '❄️', particleCount: 25 }
+};
+
+// 生成动态效果HTML
+function generateDynamicEffect(season, preview) {
+  const effect = DYNAMIC_EFFECTS[season] || DYNAMIC_EFFECTS.spring;
+  const effectsContainer = document.createElement('div');
+  effectsContainer.className = 'wallpaper-effects';
+  
+  // 根据季节生成不同的动态效果
+  switch(effect.type) {
+    case 'snow':
+      for(let i = 0; i < effect.particleCount; i++) {
+        const flake = document.createElement('span');
+        flake.className = 'wallpaper-snowflake';
+        flake.textContent = '❄';
+        flake.style.cssText = `
+          left: ${Math.random() * 100}%;
+          --size: ${6 + Math.random() * 10}px;
+          --duration: ${4 + Math.random() * 6}s;
+          --delay: ${Math.random() * 5}s;
+          --max-opacity: ${0.3 + Math.random() * 0.4};
+          --fall-distance: 200px;
+        `;
+        effectsContainer.appendChild(flake);
+      }
+      break;
+      
+    case 'petal':
+      const petalColors = ['rgba(255,182,193,', 'rgba(255,218,185,', 'rgba(255,192,203,'];
+      for(let i = 0; i < effect.particleCount; i++) {
+        const petal = document.createElement('div');
+        petal.className = 'wallpaper-petal';
+        const color = petalColors[Math.floor(Math.random() * petalColors.length)];
+        petal.style.cssText = `
+          left: ${Math.random() * 100}%;
+          top: -20px;
+          --size: ${8 + Math.random() * 12}px;
+          --petal-color: ${color}0.6);
+          --duration: ${6 + Math.random() * 8}s;
+          --delay: ${Math.random() * 8}s;
+          --max-opacity: ${0.4 + Math.random() * 0.3};
+          --fall-distance: ${150 + Math.random() * 100}px;
+        `;
+        effectsContainer.appendChild(petal);
+      }
+      break;
+      
+    case 'leaf':
+      const leafColors = ['rgba(210,105,30,', 'rgba(255,140,0,', 'rgba(205,92,0,', 'rgba(244,164,96,'];
+      for(let i = 0; i < effect.particleCount; i++) {
+        const leaf = document.createElement('div');
+        leaf.className = 'wallpaper-particle';
+        const color = leafColors[Math.floor(Math.random() * leafColors.length)];
+        leaf.style.cssText = `
+          left: ${Math.random() * 100}%;
+          width: ${8 + Math.random() * 10}px;
+          height: ${8 + Math.random() * 10}px;
+          background: ${color}0.7);
+          border-radius: 50% 0 50% 0;
+          --duration: ${8 + Math.random() * 6}s;
+          --delay: ${Math.random() * 10}s;
+          --max-opacity: ${0.5 + Math.random() * 0.3};
+        `;
+        effectsContainer.appendChild(leaf);
+      }
+      break;
+      
+    case 'firefly':
+      const glowColors = ['rgba(255,255,150,', 'rgba(200,255,150,', 'rgba(150,255,200,'];
+      for(let i = 0; i < effect.particleCount; i++) {
+        const firefly = document.createElement('div');
+        firefly.className = 'wallpaper-firefly';
+        const color = glowColors[Math.floor(Math.random() * glowColors.length)];
+        firefly.style.cssText = `
+          left: ${10 + Math.random() * 80}%;
+          top: ${10 + Math.random() * 60}%;
+          --size: ${4 + Math.random() * 6}px;
+          --glow-color: ${color}0.8);
+          --duration: ${3 + Math.random() * 4}s;
+          --delay: ${Math.random() * 5}s;
+          --max-opacity: ${0.6 + Math.random() * 0.4};
+          --drift-x: ${-30 + Math.random() * 60}px;
+          --drift-y: ${-30 + Math.random() * 60}px;
+        `;
+        effectsContainer.appendChild(firefly);
+      }
+      break;
+  }
+  
+  // 添加星光点缀（所有季节都有）
+  for(let i = 0; i < 8; i++) {
+    const star = document.createElement('div');
+    star.className = 'wallpaper-star';
+    star.style.cssText = `
+      left: ${Math.random() * 100}%;
+      top: ${Math.random() * 40}%;
+      --size: ${2 + Math.random() * 3}px;
+      --duration: ${2 + Math.random() * 3}s;
+      --delay: ${Math.random() * 4}s;
+      --max-opacity: ${0.4 + Math.random() * 0.4};
+    `;
+    effectsContainer.appendChild(star);
+  }
+  
+  return effectsContainer;
+}
+
+// 壁纸生成按钮点击事件
+document.getElementById('generate-wallpaper').addEventListener('click', async function() {
+  const btn = this;
+  const preview = document.getElementById('wallpaper-preview');
+  const jqName = document.getElementById('scroll-name').textContent;
+  const jq = JIEQI.find(j => j.name === jqName);
+  
+  if (!jq) return;
+  
+  // 获取选择的尺寸
+  const sizeType = document.querySelector('input[name="wallpaper-size"]:checked').value;
+  
+  // 显示加载状态
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="wallpaper-btn-icon">⏳</span><span class="wallpaper-btn-text">生成中...</span>';
+  preview.innerHTML = `
+    <div class="wallpaper-loading">
+      <div class="wallpaper-loading-spinner"></div>
+      <div class="wallpaper-loading-text">正在为您创作壁纸...</div>
+    </div>
+  `;
+  
+  try {
+    // 调用AI生成壁纸
+    const prompt = generateWallpaperPrompt(jq, sizeType);
+    const sizeConfig = sizeType === 'mobile' 
+      ? { size: "1024x1792", canvasW: 1080, canvasH: 1920 }
+      : { size: "1792x1024", canvasW: 1920, canvasH: 1080 };
+    
+    const result = await image_gen({
+      n: 1,
+      prompt: `${prompt}，高清细腻，中国传统水墨风格，${sizeConfig.size}，背景渐变暗色调，中心留白区域用于显示节气信息`,
+      quality: "high",
+      size: sizeConfig.size,
+      style: "vivid"
+    });
+    
+    if (result && result.length > 0) {
+      const imageUrl = result[0];
+      currentWallpaperData = { url: imageUrl, name: jq.name, date: jq.date, sizeType };
+      
+      // 显示生成的壁纸（带动态效果预览）
+      preview.innerHTML = `
+        <div class="wallpaper-dynamic">
+          <img src="${imageUrl}" alt="${jq.name}壁纸" crossorigin="anonymous">
+          ${generateDynamicEffect(jq.season, preview).outerHTML}
+        </div>
+        <button class="wallpaper-download-btn" onclick="downloadWallpaper()">⬇ 下载壁纸</button>
+      `;
+    }
+  } catch (error) {
+    console.error('壁纸生成失败:', error);
+    // 生成失败时使用Canvas备用方案
+    generateFallbackWallpaper(jq, sizeType);
+  }
+  
+  // 恢复按钮状态
+  btn.classList.remove('loading');
+  btn.innerHTML = '<span class="wallpaper-btn-icon">🎨</span><span class="wallpaper-btn-text">重新生成</span>';
+});
+
+// Canvas精美壁纸生成
+function generateFallbackWallpaper(jq, sizeType = 'mobile') {
+  const preview = document.getElementById('wallpaper-preview');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // 根据尺寸类型设置画布
+  const isMobile = sizeType === 'mobile';
+  canvas.width = isMobile ? 1080 : 1920;
+  canvas.height = isMobile ? 1920 : 1080;
+  
+  // 四季精美配色方案
+  const seasonThemes = {
+    spring: {
+      bg1: '#0d2818', bg2: '#1a4d2e', bg3: '#2d5a3d',
+      accent: '#ff9eb5', gold: '#c8a96e',
+      particle: ['rgba(255,182,193,0.6)', 'rgba(255,218,185,0.5)', 'rgba(255,192,203,0.4)'],
+      glow: 'rgba(111,207,151,0.3)'
+    },
+    summer: {
+      bg1: '#1a0a28', bg2: '#2d1050', bg3: '#4a1870',
+      accent: '#fff5a0', gold: '#c8a96e',
+      particle: ['rgba(255,255,150,0.6)', 'rgba(200,255,200,0.4)', 'rgba(150,200,255,0.3)'],
+      glow: 'rgba(235,87,87,0.3)'
+    },
+    autumn: {
+      bg1: '#1a1005', bg2: '#3a2008', bg3: '#5a3510',
+      accent: '#ffb347', gold: '#c8a96e',
+      particle: ['rgba(210,105,30,0.7)', 'rgba(255,140,0,0.5)', 'rgba(205,92,0,0.4)'],
+      glow: 'rgba(242,153,74,0.3)'
+    },
+    winter: {
+      bg1: '#0a1020', bg2: '#1a2a4a', bg3: '#2a3a5a',
+      accent: '#a0d8ff', gold: '#c8a96e',
+      particle: ['rgba(200,220,255,0.8)', 'rgba(150,180,255,0.5)', 'rgba(255,255,255,0.3)'],
+      glow: 'rgba(86,204,242,0.3)'
+    }
+  };
+  
+  const theme = seasonThemes[jq.season] || seasonThemes.spring;
+  
+  // 创建精美渐变背景
+  const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  bgGradient.addColorStop(0, theme.bg1);
+  bgGradient.addColorStop(0.5, theme.bg2);
+  bgGradient.addColorStop(1, theme.bg3);
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 添加光晕效果
+  const glowX = canvas.width * 0.5;
+  const glowY = canvas.height * (isMobile ? 0.25 : 0.4);
+  const glowRadius = Math.min(canvas.width, canvas.height) * 0.5;
+  const glowGradient = ctx.createRadialGradient(glowX, glowY, 0, glowX, glowY, glowRadius);
+  glowGradient.addColorStop(0, theme.glow);
+  glowGradient.addColorStop(1, 'transparent');
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // 绘制装饰性圆环（金色光圈）
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height * (isMobile ? 0.32 : 0.45);
+  const ringRadius = Math.min(canvas.width, canvas.height) * 0.28;
+  
+  // 外圈装饰
+  ctx.strokeStyle = 'rgba(200,169,110,0.08)';
+  ctx.lineWidth = 2;
+  for(let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, ringRadius + i * 30, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // 内圈装饰（虚线）
+  ctx.setLineDash([5, 10]);
+  ctx.strokeStyle = 'rgba(200,169,110,0.12)';
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, ringRadius - 20, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // 添加角落装饰纹样
+  const cornerSize = 60;
+  ctx.strokeStyle = 'rgba(200,169,110,0.1)';
+  ctx.lineWidth = 1;
+  // 左上角
+  ctx.beginPath();
+  ctx.moveTo(30, cornerSize);
+  ctx.lineTo(30, 30);
+  ctx.lineTo(cornerSize, 30);
+  ctx.stroke();
+  // 右上角
+  ctx.beginPath();
+  ctx.moveTo(canvas.width - 30, cornerSize);
+  ctx.lineTo(canvas.width - 30, 30);
+  ctx.lineTo(canvas.width - cornerSize, 30);
+  ctx.stroke();
+  
+  // 节气图标（大号，带光晕）
+  ctx.font = `${isMobile ? 140 : 120}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // 图标光晕
+  ctx.shadowColor = theme.accent;
+  ctx.shadowBlur = 40;
+  ctx.fillText(jq.icon, centerX, centerY - 20);
+  ctx.shadowBlur = 0;
+  
+  // 节气名称（渐变色文字）
+  const nameGradient = ctx.createLinearGradient(centerX - 200, 0, centerX + 200, 0);
+  nameGradient.addColorStop(0, theme.accent);
+  nameGradient.addColorStop(0.5, theme.gold);
+  nameGradient.addColorStop(1, theme.accent);
+  ctx.font = `bold ${isMobile ? 110 : 90}px "STKaiti", "KaiTi", serif`;
+  ctx.fillStyle = nameGradient;
+  ctx.shadowColor = 'rgba(200,169,110,0.5)';
+  ctx.shadowBlur = 20;
+  ctx.fillText(jq.name, centerX, centerY + (isMobile ? 200 : 160));
+  ctx.shadowBlur = 0;
+  
+  // 日期标签
+  const dateY = centerY + (isMobile ? 280 : 230);
+  ctx.fillStyle = 'rgba(200,169,110,0.15)';
+  ctx.beginPath();
+  const dateWidth = isMobile ? 140 : 120;
+  ctx.roundRect(centerX - dateWidth/2, dateY - 22, dateWidth, 40, 20);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(200,169,110,0.4)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.font = `${isMobile ? 32 : 28}px "STKaiti", "KaiTi", serif`;
+  ctx.fillStyle = theme.gold;
+  ctx.fillText(jq.date, centerX, dateY + 5);
+  
+  // 精美分隔线（带装饰）
+  const lineY = centerY + (isMobile ? 380 : 320);
+  ctx.strokeStyle = 'rgba(200,169,110,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(centerX - 150, lineY);
+  ctx.lineTo(centerX - 30, lineY);
+  ctx.stroke();
+  ctx.font = '20px serif';
+  ctx.fillStyle = 'rgba(200,169,110,0.5)';
+  ctx.fillText('✦', centerX, lineY + 6);
+  ctx.beginPath();
+  ctx.moveTo(centerX + 30, lineY);
+  ctx.lineTo(centerX + 150, lineY);
+  ctx.stroke();
+  
+  // 诗词名句（带引号装饰）
+  const poemY = centerY + (isMobile ? 460 : 400);
+  ctx.font = `${isMobile ? 36 : 30}px "STKaiti", "KaiTi", serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  // 左引号
+  ctx.font = '48px serif';
+  ctx.fillStyle = 'rgba(200,169,110,0.3)';
+  ctx.fillText('"', centerX - (isMobile ? 160 : 200), poemY - 30);
+  // 诗句
+  ctx.font = `${isMobile ? 36 : 30}px "STKaiti", "KaiTi", serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const poemText = jq.poem.length > 18 ? jq.poem.substring(0, 18) + '...' : jq.poem;
+  ctx.fillText(poemText, centerX, poemY);
+  // 右引号
+  ctx.font = '48px serif';
+  ctx.fillStyle = 'rgba(200,169,110,0.3)';
+  ctx.fillText('"', centerX + (isMobile ? 160 : 200), poemY + 30);
+  
+  // 诗词出处
+  ctx.font = `${isMobile ? 26 : 22}px "STKaiti", "KaiTi", serif`;
+  ctx.fillStyle = 'rgba(200,169,110,0.6)';
+  ctx.fillText('—— ' + jq.poet, centerX, poemY + (isMobile ? 60 : 50));
+  
+  // 底部水印（精美设计）
+  const watermarkY = canvas.height - (isMobile ? 100 : 70);
+  ctx.font = `${isMobile ? 24 : 20}px serif`;
+  ctx.fillStyle = 'rgba(200,169,110,0.25)';
+  ctx.fillText('· 廿四节气 · 时令诗境 ·', centerX, watermarkY);
+  
+  // 添加底部装饰线
+  ctx.strokeStyle = 'rgba(200,169,110,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(centerX - 100, watermarkY + 30);
+  ctx.lineTo(centerX - 20, watermarkY + 30);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(200,169,110,0.2)';
+  ctx.font = '16px serif';
+  ctx.fillText('☯', centerX, watermarkY + 34);
+  ctx.beginPath();
+  ctx.moveTo(centerX + 20, watermarkY + 30);
+  ctx.lineTo(centerX + 100, watermarkY + 30);
+  ctx.stroke();
+  
+  // 生成图片并显示
+  const dataUrl = canvas.toDataURL('image/png');
+  currentWallpaperData = { url: dataUrl, name: jq.name, date: jq.date, sizeType };
+  
+  preview.innerHTML = `
+    <div class="wallpaper-dynamic">
+      <img src="${dataUrl}" alt="${jq.name}壁纸">
+      ${generateDynamicEffect(jq.season, preview).outerHTML}
+    </div>
+    <button class="wallpaper-download-btn" onclick="downloadWallpaper()">⬇ 下载壁纸</button>
+  `;
+}
+
+// 下载壁纸
+function downloadWallpaper() {
+  if (!currentWallpaperData) return;
+  
+  const link = document.createElement('a');
+  link.href = currentWallpaperData.url;
+  const sizeLabel = currentWallpaperData.sizeType === 'mobile' ? '手机' : '电脑';
+  link.download = `节气壁纸_${currentWallpaperData.name}_${sizeLabel}端_${currentWallpaperData.date}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ============================================================
+//  滚动进度条 & 视差
+// ============================================================
+window.addEventListener('scroll', () => {
+  const y = window.scrollY;
+  const progress = (y / (document.body.scrollHeight - window.innerHeight)) * 100;
+  document.getElementById('progress-bar').style.width = progress + '%';
+  
+  // 装饰圆环视差
+  document.querySelectorAll('.deco-ring').forEach((el, i) => {
+    el.style.transform = `scale(${1 + i*0.05}) translateY(${y * (0.05 + i*0.03)}px)`;
+  });
+  
+  // 浮动字符视差
+  document.querySelectorAll('.float-char').forEach((el, i) => {
+    el.style.transform = `translateY(${y * 0.1 * (i%2 ? 1 : -1)}px)`;
+  });
+});
+
+// ============================================================
+//  Reveal 动画
+// ============================================================
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+</script>
+</body>
+</html>
